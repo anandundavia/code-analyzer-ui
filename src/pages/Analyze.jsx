@@ -5,25 +5,23 @@ import withStyles from "@material-ui/core/styles/withStyles";
 import Button from "@material-ui/core/Button";
 import Paper from "@material-ui/core/Paper";
 import Typography from "@material-ui/core/Typography";
-import Fade from "@material-ui/core/Fade";
 import CircularProgress from "@material-ui/core/CircularProgress";
 import Stepper from "@material-ui/core/Stepper";
 import Step from "@material-ui/core/Step";
 import StepLabel from "@material-ui/core/StepLabel";
-import StepButton from "@material-ui/core/StepButton";
-import Input from "@material-ui/core/Input";
-import OutlinedInput from "@material-ui/core/OutlinedInput";
-import FilledInput from "@material-ui/core/FilledInput";
 import InputLabel from "@material-ui/core/InputLabel";
 import MenuItem from "@material-ui/core/MenuItem";
-import FormHelperText from "@material-ui/core/FormHelperText";
 import FormControl from "@material-ui/core/FormControl";
 import Select from "@material-ui/core/Select";
+import TextField from "@material-ui/core/TextField";
+import Table from "@material-ui/core/Table";
+import TableBody from "@material-ui/core/TableBody";
+import TableCell from "@material-ui/core/TableCell";
+import TableHead from "@material-ui/core/TableHead";
+import TableRow from "@material-ui/core/TableRow";
 
-// import { loginSuccessful } from "../../reducers/auth/auth.reducer";
-
-import logger from "../utils/logger";
-const log = logger("registration");
+import Axios from "axios";
+import constants from "../constants";
 
 const styles = theme => ({
 	main: {
@@ -60,11 +58,31 @@ const styles = theme => ({
 	},
 	actions: {
 		marginTop: theme.spacing.unit * 8,
-		width: "300px",
 		alignSelf: "center"
 	},
 	backButton: {
 		marginRight: theme.spacing.unit * 2
+	},
+	code: {
+		alignSelf: "center",
+		width: "80%"
+	},
+	or: {
+		textAlign: "center"
+	},
+	upload: {
+		marginTop: theme.spacing.unit * 2,
+		alignSelf: "center",
+		textAlign: "center"
+	},
+	result: {
+		display: "flex",
+		flexDirection: "column",
+		alignItems: "center"
+	},
+	loading: {
+		alignSelf: "center",
+		textAlign: "center"
 	}
 });
 
@@ -74,7 +92,10 @@ class Registration extends React.Component {
 		this.state = {
 			steps: ["Select a Language", "Provide Code", "Results"],
 			activeStep: 0,
-			languages: ["JavaScript"]
+			languages: ["JavaScript"],
+			code: "",
+			file: null,
+			results: null
 		};
 	}
 
@@ -91,9 +112,17 @@ class Registration extends React.Component {
 		);
 	}
 
+	handleCodeChange = e => {
+		this.setState({ code: e.target.value });
+	};
+
+	handleFileChange = e => {
+		this.setState({ file: e.target.files[0] });
+	};
+
 	renderMain() {
 		const { classes } = this.props;
-		const { activeStep, languages } = this.state;
+		const { activeStep, languages, code } = this.state;
 		if (activeStep === 0) {
 			return (
 				<div className={classes.select}>
@@ -115,14 +144,105 @@ class Registration extends React.Component {
 					</FormControl>
 				</div>
 			);
+		} else if (activeStep === 1) {
+			return (
+				<div className={classes.code}>
+					<FormControl fullWidth>
+						<TextField
+							multiline
+							rows="8"
+							rowsMax="8"
+							value={code}
+							onChange={this.handleCodeChange}
+							className={classes.textField}
+							margin="normal"
+							variant="outlined"
+						/>
+					</FormControl>
+					<Typography className={classes.or} component="h4" variant="subheading">
+						OR
+					</Typography>
+					<FormControl fullWidth className={classes.upload}>
+						<input
+							className={classes.input}
+							style={{ display: "none" }}
+							id="raised-button-file"
+							type="file"
+							onChange={this.handleFileChange}
+						/>
+						<label htmlFor="raised-button-file">
+							<Button variant="contained" component="span" className={classes.button}>
+								Upload a file
+							</Button>
+						</label>
+					</FormControl>
+				</div>
+			);
+		} else {
+			const { file, code } = this.state;
+			if (!file && !code) {
+				return (
+					<div className={classes.result}>
+						<Typography className={classes.or} component="h4" variant="subheading">
+							Either upload a file or paste the code.
+						</Typography>
+					</div>
+				);
+			}
+			if (!this.state.results) {
+				this.getResults();
+				return (
+					<div className={classes.result}>
+						<CircularProgress className={classes.loading} />
+					</div>
+				);
+			} else {
+				const firstFileResult = this.state.results[0];
+				const messages = firstFileResult.messages;
+				return (
+					<div className={classes.result}>
+						<Typography className={classes.or} component="h1" variant="headline">
+							Results
+						</Typography>
+						<Table className={classes.table}>
+							<TableHead>
+								<TableRow>
+									<TableCell>Line Number</TableCell>
+									<TableCell align="right">Rule ID</TableCell>
+									<TableCell align="right">Message</TableCell>
+									<TableCell align="right">Severity</TableCell>
+								</TableRow>
+							</TableHead>
+							<TableBody>
+								{messages.map(row => (
+									<TableRow key={row.name}>
+										<TableCell component="th" scope="row">
+											{row.line}
+										</TableCell>
+										<TableCell align="right">{row.ruleId}</TableCell>
+										<TableCell align="right">{row.message}</TableCell>
+										<TableCell align="right">{row.severity}</TableCell>
+									</TableRow>
+								))}
+							</TableBody>
+						</Table>
+					</div>
+				);
+			}
 		}
-		return <Paper>Hi</Paper>;
 	}
 
 	goToNextStep = () => {
 		const { activeStep, steps } = this.state;
 		if (activeStep === steps.length - 1) {
-			this.setState({ activeStep: 0 });
+			this.setState({
+				steps: ["Select a Language", "Provide Code", "Results"],
+				activeStep: 0,
+				languages: ["JavaScript"],
+				code: "",
+				file: null,
+				results: null
+			});
 		} else {
 			this.setState({ activeStep: activeStep + 1 });
 		}
@@ -135,7 +255,7 @@ class Registration extends React.Component {
 
 	renderActions() {
 		const { classes } = this.props;
-		const { steps, activeStep, languages } = this.state;
+		const { steps, activeStep } = this.state;
 		return (
 			<div className={classes.actions}>
 				<Button
@@ -165,16 +285,28 @@ class Registration extends React.Component {
 			</div>
 		);
 	}
+
+	getResults() {
+		const { file, code } = this.state;
+		let data, url;
+		if (file) {
+			url = `${constants.api.base}${constants.api.endpoints.file}`;
+			data = new FormData();
+			data.append("file", file);
+			data.append("lang", "js");
+		} else if (code) {
+			url = `${constants.api.base}${constants.api.endpoints.raw}`;
+			data = { lang: "js", payload: code };
+		}
+		Axios.post(url, data, { method: "POST" }).then(res => {
+			this.setState({ results: res.data });
+		});
+	}
 }
 
-const mapStateToProps = state => ({
-	// snackbar: state.snackbar,
-	// user: state.user
-});
+const mapStateToProps = state => ({});
 
-const mapDispatchToProps = {
-	// loginSuccessful
-};
+const mapDispatchToProps = {};
 
 export default connect(
 	mapStateToProps,
