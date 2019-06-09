@@ -88,7 +88,8 @@ class Registration extends React.Component {
 			languages: ["JavaScript"],
 			code: "",
 			file: null,
-			results: null
+			results: null,
+			error: null
 		};
 	}
 
@@ -115,7 +116,7 @@ class Registration extends React.Component {
 
 	renderMain() {
 		const { classes } = this.props;
-		const { activeStep, languages, code } = this.state;
+		const { activeStep, languages, code, file } = this.state;
 		if (activeStep === 0) {
 			return (
 				<div className={classes.select}>
@@ -150,6 +151,8 @@ class Registration extends React.Component {
 							className={classes.textField}
 							margin="normal"
 							variant="outlined"
+							disabled={!!file}
+							placeholder={file ? "You have selected a file" : "Paste your code here"}
 						/>
 					</FormControl>
 					<Typography className={classes.or} component="h4" variant="subheading">
@@ -165,7 +168,7 @@ class Registration extends React.Component {
 						/>
 						<label htmlFor="raised-button-file">
 							<Button variant="contained" component="span" className={classes.button}>
-								Upload a file
+								{file ? `"${file.name}" selected` : "Upload a file"}
 							</Button>
 						</label>
 					</FormControl>
@@ -187,6 +190,14 @@ class Registration extends React.Component {
 				return (
 					<div className={classes.result}>
 						<CircularProgress className={classes.loading} />
+					</div>
+				);
+			} else if (this.state.error) {
+				return (
+					<div className={classes.result}>
+						<Typography className={classes.or} component="h1" variant="headline">
+							{this.state.error}
+						</Typography>
 					</div>
 				);
 			} else {
@@ -234,7 +245,8 @@ class Registration extends React.Component {
 				languages: ["JavaScript"],
 				code: "",
 				file: null,
-				results: null
+				results: null,
+				error: null
 			});
 		} else {
 			this.setState({ activeStep: activeStep + 1 });
@@ -291,9 +303,13 @@ class Registration extends React.Component {
 			url = `${constants.api.base}${constants.api.endpoints.raw}`;
 			data = { lang: "js", payload: code };
 		}
-		Axios.post(url, data, { method: "POST" }).then(res => {
-			this.setState({ results: res.data });
-		});
+		Axios.post(url, data, { method: "POST" })
+			.then(res => {
+				this.setState({ results: res.data });
+			})
+			.catch(() => {
+				this.setStatus({ error: "Something Went Wrong :/ Please Reset" });
+			});
 	}
 }
 

@@ -1,7 +1,5 @@
 import React from "react";
-import { Route, Redirect } from "react-router";
-
-import { store } from "../reducers";
+import { Redirect } from "react-router";
 
 import logger from "../utils/logger";
 const log = logger("private-route");
